@@ -19,9 +19,7 @@ dev_mode <- FALSE
 nrows <- ifelse(dev_mode, 100L, -1L)
 
 # Set the project directory prefix
-prefix <- "/Users/ycjhang/Dropbox/Projects/Data_Science/UCI_human_activity_recognition/UCI_HAR_Dataset"
-setwd(paste(prefix, "../coursera_clean_data_project", sep = "/"))
-
+prefix <- paste(getwd(), "data", sep = "/")
 
 
 ##################################################
@@ -55,19 +53,19 @@ activity_labels$name <- sapply(activity_labels$name, tolower)
 # 1. Only subset of colume indes that is defined in "col_keep" will be kept.
 # Other columns are discarded.
 # 2. subject_id will be read from the file and combined into the x data table.
-read_x_data <- function(type){  
-    # Read original X data and filter only 
+read_x_data <- function(type){
+    # Read original X data and filter only
     x_data <- read.table(paste(prefix, type, paste0("X_", type, ".txt"), sep = "/"),
                          nrows = nrows, strip.white = TRUE,
-                         col.names = col_names, check.names = FALSE)   
+                         col.names = col_names, check.names = FALSE)
     # keep subsets that is defined eralier
     x_data <- data.table(x_data[, col_keep])
-    
+
     # Read subject ID and combine into x_data
     subject_id <- read.table(paste(prefix, type, paste0("subject_", type, ".txt"), sep = "/"),
                              nrows = nrows, colClasses = "character")
     x_data[, subject_id:=subject_id$V1]
-    
+
     x_data
 }
 
@@ -76,13 +74,13 @@ read_x_data <- function(type){
 # representations will be changed to characters descriving the activiry.
 read_y_data <- function(type){
     # Read original Y data
-    y_data <- read.table(paste(prefix, type, paste0("y_", type, ".txt"), sep = "/"), 
+    y_data <- read.table(paste(prefix, type, paste0("y_", type, ".txt"), sep = "/"),
                          nrows = nrows, col.names = c("activity"))
-    
+
     # map the activity values to the activity names
     y_data$activity <- plyr::mapvalues(y_data$activity, from = activity_labels$value,
                                 to = activity_labels$name)
-    
+
     data.table(y_data)
 }
 
@@ -92,17 +90,23 @@ read_y_data <- function(type){
 # The main process. Execute to read the train and test data #
 #############################################################
 
+cat("Reading X trainning data...\n")
 x_train <- read_x_data("train")
+cat("Reading X testing data...\n")
 x_test <- read_x_data("test")
+cat("Reading Y trainning data...\n")
 y_train <- read_y_data("train")
+cat("Reading Y testing data...\n")
 y_test <- read_y_data("test")
 
 # Merge x and y into the same table.
 # Combine train and test data set.
+cat("Processing data...\n")
+cat("Merging training and testing dataset and merging X and Y...\n")
 combined_data <- rbind(cbind(x_train, y_train), cbind(x_test, y_test))
 
 # This part will remove some unwanted characters in column names
-# replace "()-" with "." and "-" with "." 
+# replace "()-" with "." and "-" with "."
 symbol_clean <- function(chr){
     chr <- gsub("\\(\\)-", "_", chr)
     chr <- gsub("-", "_", chr)
@@ -110,9 +114,9 @@ symbol_clean <- function(chr){
 setnames(combined_data, sapply(colnames(combined_data), symbol_clean))
 
 # Save the combined table to file.
+cat("Saving tidy data...\n")
 write.csv(combined_data,
-          file = paste(prefix, "../coursera_clean_data_project",
-                       "combined_data.csv", sep = "/"),
+          file = paste(prefix, "combined_data.csv", sep = "/"),
           quote = FALSE, row.names = FALSE)
 
 # Clean up data during the process. Not needed anymore
@@ -124,8 +128,10 @@ write.csv(combined_data,
 ######################## Average Over Subjects #############################
 # Finally, take average of each variable for each activity and each subject.
 ############################################################################
+cat("\n\n")
+cat("Taknig average...\n")
 mean_combined_data <- combined_data[, lapply(.SD, mean), by = "subject_id,activity"]
+cat("Saving average to file...\n")
 write.csv(mean_combined_data,
-          file = paste(prefix, "../coursera_clean_data_project",
-                       "mean_combined_data.csv", sep = "/"),
+          file = paste(prefix, "mean_combined_data.csv", sep = "/"),
           quote = FALSE, row.names = FALSE)
